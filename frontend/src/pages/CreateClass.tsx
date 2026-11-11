@@ -7,7 +7,9 @@ import { errorMessage } from '../messages'
 const MAX_NAME_LENGTH = 200
 const MAX_SEATS = 100_000
 
-const SEAT_PRESETS = [40, 60, 80, 100, 120]
+const SEAT_PRESETS = [30, 40, 60, 80, 100, 120]
+const CLASS_PRESETS = ['Class 6', 'Class 7', 'Class 8', 'Class 9', 'Class 10']
+const SHIFT_PRESETS = ['Morning Shift', 'Day Shift']
 
 /** Same rules as the backend, checked first in the browser so the user gets instant feedback. */
 function validate(name: string, seatsText: string): string | null {
@@ -26,6 +28,26 @@ export function CreateClass() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [created, setCreated] = useState<{ name: string; totalSeats: number } | null>(null)
+
+  function appendShift(shift: string) {
+    if (!name.trim()) {
+      setName(`Class 6 - ${shift}`)
+    } else if (name.includes(' - ')) {
+      const base = name.split(' - ')[0].trim()
+      setName(`${base} - ${shift}`)
+    } else {
+      setName(`${name.trim()} - ${shift}`)
+    }
+  }
+
+  function setBaseClass(className: string) {
+    if (name.includes(' - ')) {
+      const shift = name.split(' - ')[1].trim()
+      setName(`${className} - ${shift}`)
+    } else {
+      setName(className)
+    }
+  }
 
   async function submit(event: FormEvent) {
     event.preventDefault()
@@ -91,6 +113,36 @@ export function CreateClass() {
               <span className="field-hint">শাখা বা শিফটসহ স্পষ্ট নাম লিখুন</span>
             </label>
 
+            {/* Quick helper buttons for class and shift */}
+            <div className="quick-helpers">
+              <div className="helper-row">
+                <span className="helper-title">শ্রেণি:</span>
+                {CLASS_PRESETS.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => setBaseClass(c)}
+                    className="chip-btn"
+                  >
+                    {c}
+                  </button>
+                ))}
+              </div>
+              <div className="helper-row">
+                <span className="helper-title">শিফট যোগ:</span>
+                {SHIFT_PRESETS.map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => appendShift(s)}
+                    className="chip-btn chip-shift"
+                  >
+                    + {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <label className="form-field">
               <span className="field-label">আসন সংখ্যা</span>
               <input
@@ -104,7 +156,7 @@ export function CreateClass() {
             </label>
 
             <div className="seat-presets">
-              <span className="presets-title">দ্রুত বাছাই:</span>
+              <span className="presets-title">দ্রুত আসন নির্বাচন:</span>
               {SEAT_PRESETS.map((count) => (
                 <button
                   key={count}
@@ -141,23 +193,27 @@ export function CreateClass() {
           </form>
         </div>
 
-        {/* Live Preview Card */}
+        {/* Live Interactive Preview Card */}
         <div className="preview-card-wrap">
           <div className="card preview-card">
-            <h3 className="preview-title">লাইভ প্রিভিউ</h3>
-            <p className="preview-subtitle">তৈরি করার পর ক্লাস তালিকায় যেভাবে দেখাবে:</p>
+            <div className="preview-header">
+              <h3 className="preview-title">লাইভ প্রিভিউ</h3>
+              <span className="live-preview-tag">স্বয়ংক্রিয় প্রিভিউ</span>
+            </div>
+            <p className="preview-subtitle">তৈরি করার পর ক্লাস তালিকায় যেভাবে প্রদর্শিত হবে:</p>
 
             <div className="preview-box">
               <div className="preview-class-header">
-                <span className="preview-name">{name.trim() || 'ক্লাসের নাম এখানে দেখাবে'}</span>
+                <span className="preview-name">{name.trim() || 'Class 6 - Morning Shift'}</span>
                 <span className="seat-chip chip-available">
-                  খালি: {seats ? bn(seats) : '০'}
+                  খালি: {seats && !isNaN(Number(seats)) ? bn(seats) : '১২০'}
                 </span>
               </div>
+
               <div className="preview-stats">
                 <div className="preview-stat-item">
                   <span className="muted small">মোট আসন</span>
-                  <strong>{seats ? bn(seats) : '০'}</strong>
+                  <strong>{seats && !isNaN(Number(seats)) ? bn(seats) : '১২০'}</strong>
                 </div>
                 <div className="preview-stat-item">
                   <span className="muted small">হোল্ড</span>
@@ -168,6 +224,11 @@ export function CreateClass() {
                   <strong>০</strong>
                 </div>
               </div>
+
+              <div className="preview-bar-wrap">
+                <div className="preview-bar-fill" style={{ width: '0%' }} />
+              </div>
+              <span className="preview-bar-label">০% আসন পূর্ণ • {seats && !isNaN(Number(seats)) ? bn(seats) : '১২০'}টি আসন উন্মুক্ত থাকবে</span>
             </div>
           </div>
         </div>

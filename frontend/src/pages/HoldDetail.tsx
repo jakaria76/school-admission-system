@@ -21,6 +21,7 @@ export function HoldDetail({ holdId, studentId, onChanged, onNeedStudentId }: Pr
   const now = useNow()
   const [busy, setBusy] = useState<'pay' | 'cancel' | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
   // Result of an action we just performed, shown until the next refresh confirms it.
   const [knownStatus, setKnownStatus] = useState<HoldStatus | null>(null)
 
@@ -84,12 +85,30 @@ export function HoldDetail({ holdId, studentId, onChanged, onNeedStudentId }: Pr
     }
   }
 
+  function copyId() {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(holdId)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }
+  }
+
+  function handlePrint() {
+    window.print()
+  }
+
   return (
     <section className="detail-section">
       <div className="section-head">
         <div>
           <h2>আবেদন বিবরণ ও ভর্তি নিশ্চিতকরণ</h2>
-          <p className="section-desc">আবেদন আইডি: <code className="id-code">{hold.data.holdId}</code></p>
+          <div className="id-sub-row">
+            <span className="muted small">আবেদন আইডি:</span>
+            <code className="id-code">{hold.data.holdId}</code>
+            <button type="button" onClick={copyId} className="copy-btn" title="আইডি কপি করুন">
+              {copied ? '✓ কপি হয়েছে' : 'কপি করুন'}
+            </button>
+          </div>
         </div>
         <a href="#/my" className="back-link">
           ← আমার আবেদন
@@ -97,7 +116,7 @@ export function HoldDetail({ holdId, studentId, onChanged, onNeedStudentId }: Pr
       </div>
 
       <div className="card hold-card">
-        {/* Visual Progress Steps */}
+        {/* Visual Progress Stepper */}
         <div className="stepper">
           <div className={`step-item ${status === 'HELD' || status === 'CONFIRMED' ? 'step-done' : ''}`}>
             <div className="step-circle">১</div>
@@ -131,6 +150,26 @@ export function HoldDetail({ holdId, studentId, onChanged, onNeedStudentId }: Pr
             <p className="timer-note">
               {isUrgent ? '⚠️ সময় প্রায় শেষ! আসন ধরে রাখতে দ্রুত ভর্তি ফি জমা দিন।' : 'এই সময়ের মধ্যে ভর্তি ফি প্রদান করে আসনটি নিশ্চিত করুন।'}
             </p>
+          </div>
+        )}
+
+        {/* Confirmed Admission Celebration Banner */}
+        {status === 'CONFIRMED' && (
+          <div className="success-hero">
+            <div className="success-icon-wrap">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                <polyline points="22 4 12 14.01 9 11.01" />
+              </svg>
+            </div>
+            <h3>অভিনন্দন! ভর্তি সম্পন্ন হয়েছে</h3>
+            <p className="success-desc">ভর্তি ফি সফলভাবে জমা হয়েছে। শিক্ষার্থী এই ক্লাসে চূড়ান্তভাবে ভর্তিকৃত।</p>
+            <button type="button" onClick={handlePrint} className="btn btn-print no-print">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16" aria-hidden="true">
+                <path fillRule="evenodd" d="M5 4v3H4a2 2 0 00-2 2v3a2 2 0 002 2h1v2a2 2 0 002 2h6a2 2 0 002-2v-2h1a2 2 0 002-2V9a2 2 0 00-2-2h-1V4a2 2 0 00-2-2H7a2 2 0 00-2 2zm8 0H7v3h6V4zm0 8H7v4h6v-4z" clipRule="evenodd" />
+              </svg>
+              ভর্তি নিশ্চিতকরণ রসিদ প্রিন্ট করুন
+            </button>
           </div>
         )}
 
@@ -169,9 +208,7 @@ export function HoldDetail({ holdId, studentId, onChanged, onNeedStudentId }: Pr
           </div>
         )}
         {status === 'CONFIRMED' && (
-          <Alert kind="success">
-            <strong>অভিনন্দন!</strong> ভর্তি ফি জমা হয়েছে। ভর্তি সফলভাবে নিশ্চিত করা হয়েছে।
-          </Alert>
+          <Alert kind="success">ভর্তি ফি জমা হয়েছে। ভর্তি নিশ্চিত। অভিনন্দন!</Alert>
         )}
         {status === 'EXPIRED' && (
           <Alert kind="warning">
@@ -195,7 +232,7 @@ export function HoldDetail({ holdId, studentId, onChanged, onNeedStudentId }: Pr
           <Alert kind="info">ফি দিতে বা বাতিল করতে উপরের ঘরে শিক্ষার্থীর জন্ম নিবন্ধন নম্বর লিখুন।</Alert>
         )}
 
-        <div className="actions">
+        <div className="actions no-print">
           <button
             type="button"
             className="btn btn-pay"

@@ -132,7 +132,7 @@ export default function App() {
           </div>
 
           {/* Student Identity Box */}
-          <div className={`student-card ${needsId ? 'needs-attention' : ''}`} data-attempt={idRequested}>
+          <div className={`student-card ${needsId ? 'card-attention' : ''}`}>
             <div className="student-card-header">
               <div className="student-label-wrap">
                 <svg className="id-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -146,17 +146,30 @@ export default function App() {
                   শিক্ষার্থীর জন্ম নিবন্ধন নম্বর (১৭ অঙ্ক)
                 </label>
               </div>
-              {studentIdInput.length > 0 && (
-                <button type="button" onClick={clearStudentId} className="clear-btn" title="মুছে ফেলুন">
-                  মুছুন
-                </button>
-              )}
+
+              <div className="student-actions">
+                {studentIdInput.length === 0 && (
+                  <button
+                    type="button"
+                    className="sample-btn"
+                    onClick={() => onStudentIdChange(SAMPLE_STUDENT_ID)}
+                    title="পরীক্ষা করার জন্য নমুনা ১৭ অঙ্কের নম্বর বসান"
+                  >
+                    নমুনা নম্বর বসান
+                  </button>
+                )}
+                {studentIdInput.length > 0 && (
+                  <button type="button" onClick={clearStudentId} className="clear-btn" title="মুছে ফেলুন">
+                    মুছুন
+                  </button>
+                )}
+              </div>
             </div>
 
             <div className="input-wrap">
               <input
-                id="student-id"
                 ref={studentInputRef}
+                id="student-id"
                 type="text"
                 inputMode="numeric"
                 autoComplete="off"
@@ -164,12 +177,19 @@ export default function App() {
                 value={studentIdInput}
                 onChange={(e) => onStudentIdChange(e.target.value)}
                 aria-describedby="student-id-hint"
-                aria-invalid={needsId}
-                className={`student-input ${studentId ? 'input-valid' : ''}`}
+                className={`student-input ${studentId ? 'input-valid' : needsId ? 'input-need' : ''}`}
               />
-              <span className="digit-counter">
+              <span className={`digit-counter ${studentId ? 'counter-ok' : ''}`}>
                 {bn(studentIdInput.length)}/১৭
               </span>
+            </div>
+
+            {/* Visual digit completion progress bar */}
+            <div className="id-progress-bar">
+              <div
+                className={`id-progress-fill ${studentId ? 'id-progress-full' : needsId ? 'id-progress-error' : ''}`}
+                style={{ width: `${Math.min(100, (studentIdInput.length / 17) * 100)}%` }}
+              />
             </div>
 
             <div
@@ -194,11 +214,6 @@ export default function App() {
                 `আরও ${bn(17 - studentIdInput.length)}টি অঙ্ক লিখুন (মোট ১৭ অঙ্ক)।`
               )}
             </div>
-            {studentIdInput.length === 0 && (
-              <button type="button" className="sample-btn" onClick={() => onStudentIdChange(SAMPLE_STUDENT_ID)}>
-                নমুনা নম্বর বসান
-              </button>
-            )}
           </div>
         </div>
       </header>
@@ -224,7 +239,7 @@ export default function App() {
             </svg>
             আমার আবেদন
             {activeCount > 0 && (
-              <span className="count" title="চলমান আবেদন">
+              <span className="count pulse-count" title="চলমান আবেদন">
                 {bn(activeCount)}
               </span>
             )}
@@ -243,8 +258,15 @@ export default function App() {
 
         {/* Professional Footer */}
         <footer className="page-footer">
-          <p>© {bn(2026)} স্কুল ভর্তি ব্যবস্থাপনা পোর্টাল • First-Come-First-Served (FCFS) আসন বণ্টন ব্যবস্থা</p>
-          <p className="footer-sub">উচ্চ কনকারেন্সি সুরক্ষিত • ডেটাবেজ-স্তরে সিট লক নিশ্চিত</p>
+          <div className="footer-content">
+            <div className="footer-brand">
+              <span className="footer-title">স্কুল ভর্তি পোর্টাল</span>
+              <span className="footer-badge">First-Come-First-Served (FCFS) ইঞ্জিন</span>
+            </div>
+            <p className="footer-text">
+              © {bn(2026)} সকল অধিকার সংরক্ষিত • হাই-কনকারেন্সি রো-লেভেল সিকিউরিটি ও ডাটাবেজ ক্লক-সিঙ্কড আসন ব্যবস্থাপনা।
+            </p>
+          </div>
         </footer>
       </div>
     </div>

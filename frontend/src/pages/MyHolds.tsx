@@ -1,6 +1,7 @@
-import type { Hold } from '../api'
+import { useState, useMemo } from 'react'
+import type { Hold, HoldStatus } from '../api'
 import { Alert, Spinner, StatusBadge } from '../components/ui'
-import { effectiveStatus, formatRemaining, remainingMs } from '../format'
+import { bn, effectiveStatus, formatRemaining, remainingMs } from '../format'
 import { useNow } from '../hooks'
 import { errorMessage } from '../messages'
 
@@ -14,14 +15,49 @@ interface Props {
 /** "আমার আবেদন": every application of this student, straight from the server. */
 export function MyHolds({ studentId, holds, loading, error }: Props) {
   const now = useNow()
+  const [filter, setFilter] = useState<'ALL' | 'HELD' | 'CONFIRMED' | 'DONE'>('ALL')
+
+  const processedHolds = useMemo(() => {
+    if (!holds) return []
+    return holds.map((h) => ({
+      ...h,
+      effective: effectiveStatus(h, now),
+      remaining: remainingMs(h, now),
+    }))
+  }, [holds, now])
+
+  const filteredHolds = useMemo(() => {
+    return processedHolds.filter((h) => {
+      if (filter === 'ALL') return true
+      if (filter === 'HELD') return h.effective === 'HELD'
+      if (filter === 'CONFIRMED') return h.effective === 'CONFIRMED'
+      if (filter === 'DONE') return h.effective === 'EXPIRED' || h.effective === 'CANCELLED'
+      return true
+    })
+  }, [processedHolds, filter])
+
+  const heldCount = processedHolds.filter((h) => h.effective === 'HELD').length
+  const confirmedCount = processedHolds.filter((h) => h.effective === 'CONFIRMED').length
 
   return (
     <section>
       <div className="section-head">
         <div>
           <h2>আমার আবেদন</h2>
-          <p className="section-desc">শিক্ষার্থীর আবেদনের বর্তমান অবস্থা, মেয়াদ ও ভর্তি নিশ্চিতকরণ</p>
+          <p className="section-desc">শিক্ষার্থীর সকল আবেদনের বর্তমান অবস্থা, মেয়াদ ও ভর্তি নিশ্চিতকরণ</p>
         </div>
+
+        {holds && holds.length > 0 && (
+          <div className="my-holds-summary">
+            <span className="summary-pill">মোট আবেদন: <strong>{bn(holds.length)}</strong></span>
+            {heldCount > 0 && (
+              <span className="summary-pill summary-held">চলমান Hold: <strong>{bn(heldCount)}</strong></span>
+            )}
+            {confirmedCount > 0 && (
+              <span className="summary-pill summary-confirmed">ভর্তি নিশ্চিত: <strong>{bn(confirmedCount)}</strong></span>
+            )}
+          </div>
+        )}
       </div>
 
       {!studentId && (
@@ -36,20 +72,47 @@ export function MyHolds({ studentId, holds, loading, error }: Props) {
       {loading && <Spinner label="আবেদনের তালিকা লোড হচ্ছে…" />}
 
       {holds && holds.length === 0 && (
-        <div className="empty">
-          <svg className="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-            <polyline points="14 2 14 8 20 8" />
-            <line x1="9" y1="15" x2="15" y2="15" />
-          </svg>
-          <p>
-            এই শিক্ষার্থীর কোনো আবেদন নেই। <a href="#/classes">ক্লাস তালিকা</a> থেকে আবেদন করুন।
-          </p>
-        </div>
+        <p className="empty">
+          এই শিক্ষার্থীর কোনো আবেদন নেই। <a href="#/classes">ক্লাস তালিকা</a> থেকে আবেদন করুন।
+        </p>
       )}
 
       {holds && holds.length > 0 && (
         <div className="table-card">
+          {/* Status Filter Toolbar */}
+          <div className="table-toolbar">
+            <div className="filter-chips">
+              <button
+                type="button"
+                className={`filter-btn ${filter === 'ALL' ? 'filter-active' : ''}`}
+                onClick={() => setFilter('ALL')}
+              >
+                সকল আবেদন ({bn(holds.length)})
+              </button>
+              <button
+                type="button"
+                className={`filter-btn ${filter === 'HELD' ? 'filter-active' : ''}`}
+                onClick={() => setFilter('HELD')}
+              >
+                চলমান Hold ({bn(heldCount)})
+              </button>
+              <button
+                type="button"
+                className={`filter-btn ${filter === 'CONFIRMED' ? 'filter-active' : ''}`}
+                onClick={() => setFilter('CONFIRMED')}
+              >
+                ভর্তি নিশ্চিত ({bn(confirmedCount)})
+              </button>
+              <button
+                type="button"
+                className={`filter-btn ${filter === 'DONE' ? 'filter-active' : ''}`}
+                onClick={() => setFilter('DONE')}
+              >
+                অন্যান্য
+              </button>
+            </div>
+          </div>
+
           <div className="table-wrap">
             <table className="modern-table">
               <thead>
@@ -61,40 +124,48 @@ export function MyHolds({ studentId, holds, loading, error }: Props) {
                 </tr>
               </thead>
               <tbody>
-                {holds.map((hold) => {
-                  const status = effectiveStatus(hold, now)
-                  const isHeld = status === 'HELD'
+                {filteredHolds.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="text-center py-8 text-muted">
+                      এই বিভাগে কোনো আবেদন নেই।
+                    </td>
+                  </tr>
+                ) : (
+                  filteredHolds.map((hold) => {
+                    const status: HoldStatus = hold.effective
+                    const isHeld = status === 'HELD'
 
-                  return (
-                    <tr key={hold.holdId} className={isHeld ? 'row-held-active' : ''}>
-                      <td className="class-name-cell">
-                        <span className="class-name">{hold.className ?? hold.classId}</span>
-                        <div className="muted small id-sub">আইডি: {hold.holdId}</div>
-                      </td>
-                      <td>
-                        <StatusBadge status={status} />
-                      </td>
-                      <td className="countdown-cell">
-                        {isHeld ? (
-                          <span className="countdown-chip">
-                            <span className="chip-clock-dot" />
-                            {formatRemaining(remainingMs(hold, now))}
-                          </span>
-                        ) : (
-                          <span className="muted">-</span>
-                        )}
-                      </td>
-                      <td className="text-right">
-                        <a
-                          className={`btn ${isHeld ? 'btn-pay-sm' : status === 'CONFIRMED' ? 'btn-confirmed' : 'btn-link'}`}
-                          href={`#/holds/${hold.holdId}`}
-                        >
-                          {isHeld ? 'ফি দিন / বাতিল করুন' : 'বিস্তারিত'}
-                        </a>
-                      </td>
-                    </tr>
-                  )
-                })}
+                    return (
+                      <tr key={hold.holdId} className={isHeld ? 'row-held-active' : ''}>
+                        <td className="class-name-cell">
+                          <span className="class-name">{hold.className ?? hold.classId}</span>
+                          <div className="muted small id-sub">আবেদন আইডি: {hold.holdId}</div>
+                        </td>
+                        <td>
+                          <StatusBadge status={status} />
+                        </td>
+                        <td className="countdown-cell">
+                          {isHeld ? (
+                            <span className="countdown-chip">
+                              <span className="chip-clock-dot" />
+                              {formatRemaining(hold.remaining)}
+                            </span>
+                          ) : (
+                            <span className="muted">-</span>
+                          )}
+                        </td>
+                        <td className="text-right">
+                          <a
+                            className={`btn ${isHeld ? 'btn-pay-sm' : status === 'CONFIRMED' ? 'btn-confirmed' : 'btn-link'}`}
+                            href={`#/holds/${hold.holdId}`}
+                          >
+                            {isHeld ? 'ফি দিন / বাতিল করুন' : 'বিস্তারিত'}
+                          </a>
+                        </td>
+                      </tr>
+                    )
+                  })
+                )}
               </tbody>
             </table>
           </div>
