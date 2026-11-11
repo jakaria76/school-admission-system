@@ -11,10 +11,12 @@ interface Props {
   holdId: string
   studentId: string | null
   onChanged: () => void
+  /** Asks the app to point the user at the student-number box. */
+  onNeedStudentId: () => void
 }
 
 /** The "আবেদন" screen: status, time left, pay and cancel. */
-export function HoldDetail({ holdId, studentId, onChanged }: Props) {
+export function HoldDetail({ holdId, studentId, onChanged, onNeedStudentId }: Props) {
   const hold = usePolling(`hold:${holdId}`, () => api.getHold(holdId), HOLD_REFRESH_MS)
   const now = useNow()
   const [busy, setBusy] = useState<'pay' | 'cancel' | null>(null)
@@ -54,7 +56,11 @@ export function HoldDetail({ holdId, studentId, onChanged }: Props) {
   const isUrgent = isHeld && remaining < 120_000 // less than 2 minutes
 
   async function run(action: 'pay' | 'cancel') {
-    if (!studentId || busy) return
+    if (busy) return
+    if (!studentId) {
+      onNeedStudentId()
+      return
+    }
     if (action === 'cancel' && !window.confirm('আপনি কি নিশ্চিত যে আবেদনটি বাতিল করতে চান? আসনটি অন্যদের জন্য খুলে যাবে।')) {
       return
     }
@@ -193,7 +199,7 @@ export function HoldDetail({ holdId, studentId, onChanged }: Props) {
           <button
             type="button"
             className="btn btn-pay"
-            disabled={!isHeld || !studentId || busy !== null}
+            disabled={!isHeld || busy !== null}
             onClick={() => run('pay')}
           >
             {busy === 'pay' ? (
@@ -212,7 +218,7 @@ export function HoldDetail({ holdId, studentId, onChanged }: Props) {
           <button
             type="button"
             className="btn btn-danger"
-            disabled={!isHeld || !studentId || busy !== null}
+            disabled={!isHeld || busy !== null}
             onClick={() => run('cancel')}
           >
             {busy === 'cancel' ? (

@@ -18,7 +18,7 @@ describe('application screen', () => {
       body: { holdId: 'h_1', classId: 'c_1', className: 'Class 6 - Morning Shift', status: 'HELD', expiresAt },
     }))
 
-    render(<HoldDetail holdId="h_1" studentId={STUDENT} onChanged={() => {}} />)
+    render(<HoldDetail holdId="h_1" studentId={STUDENT} onChanged={() => {}} onNeedStudentId={() => {}} />)
     await advance(0)
 
     expect(screen.getByTestId('hold-status')).toHaveTextContent('HELD')
@@ -48,7 +48,7 @@ describe('application screen', () => {
       return { body: { holdId: 'h_1', classId: 'c_1', className: 'Class 6', status, expiresAt } }
     })
 
-    render(<HoldDetail holdId="h_1" studentId={STUDENT} onChanged={() => {}} />)
+    render(<HoldDetail holdId="h_1" studentId={STUDENT} onChanged={() => {}} onNeedStudentId={() => {}} />)
     await advance(0)
 
     await act(async () => {
@@ -71,7 +71,7 @@ describe('application screen', () => {
         : { body: { holdId: 'h_1', classId: 'c_1', className: 'Class 6', status: 'HELD', expiresAt } },
     )
 
-    render(<HoldDetail holdId="h_1" studentId={STUDENT} onChanged={() => {}} />)
+    render(<HoldDetail holdId="h_1" studentId={STUDENT} onChanged={() => {}} onNeedStudentId={() => {}} />)
     await advance(0)
     await act(async () => {
       screen.getByRole('button', { name: 'ভর্তি ফি দিন' }).click()
@@ -85,7 +85,7 @@ describe('application screen', () => {
     vi.useFakeTimers()
     mockBackend(() => 'network-error')
 
-    render(<HoldDetail holdId="h_1" studentId={STUDENT} onChanged={() => {}} />)
+    render(<HoldDetail holdId="h_1" studentId={STUDENT} onChanged={() => {}} onNeedStudentId={() => {}} />)
     await advance(0)
 
     expect(screen.getByRole('alert')).toHaveTextContent('সার্ভারের সাথে যোগাযোগ করা যাচ্ছে না')

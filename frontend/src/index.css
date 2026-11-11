@@ -1428,3 +1428,93 @@ a:hover {
     font-size: 2.4rem;
   }
 }
+
+/* ---------- Student number: attention state, sample button, live server status ---------- */
+
+.student-card.needs-attention {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 4px rgba(225, 29, 72, 0.14);
+  animation: attention-shake 0.45s ease;
+}
+
+.student-card.needs-attention .student-input {
+  border-color: var(--danger);
+}
+
+.hint.hint-error {
+  color: var(--danger-text);
+  font-weight: 600;
+  animation: attention-shake 0.45s ease;
+}
+
+@keyframes attention-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20%,
+  60% {
+    transform: translateX(-5px);
+  }
+  40%,
+  80% {
+    transform: translateX(5px);
+  }
+}
+
+.sample-btn {
+  margin-top: 8px;
+  padding: 4px 10px;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--primary);
+  background: var(--primary-light);
+  border: 1px dashed var(--primary-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.sample-btn:hover {
+  background: #dbeafe;
+}
+
+.live-status-pill.status-offline {
+  color: var(--danger-text);
+  background: var(--danger-bg);
+  border-color: var(--danger-border);
+}
+
+.live-status-pill.status-offline .live-dot {
+  background: var(--danger);
+  animation: none;
+}
+
+.live-status-pill.status-connecting {
+  color: var(--muted);
+  background: var(--surface-alt);
+  border-color: var(--border);
+}
+
+.live-status-pill.status-connecting .live-dot {
+  background: var(--subtle);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .student-card.needs-attention,
+  .hint.hint-error {
+    animation: none;
+  }
+}
+
+/* A disabled button must look unavailable, not merely pale. */
+.btn:disabled,
+.btn:disabled:hover {
+  background: var(--surface-alt);
+  border-color: var(--border);
+  color: var(--subtle);
+  box-shadow: none;
+  transform: none;
+  opacity: 1;
+  cursor: not-allowed;
+}

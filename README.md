@@ -63,7 +63,7 @@ Both suites run inside Docker, nothing else has to be installed.
 # Backend: 57 tests against a real PostgreSQL (concurrency, hold rules, validation)
 docker compose --profile test run --rm --build backend-tests
 
-# Frontend: 16 tests (Vitest + Testing Library)
+# Frontend: 17 tests (Vitest + Testing Library)
 docker compose --profile test run --rm --build frontend-tests
 ```
 

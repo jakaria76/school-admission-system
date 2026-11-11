@@ -58,11 +58,20 @@ describe('class list', () => {
 
     render(<App />)
     await advance(0)
-    expect(screen.getByRole('button', { name: 'আবেদন করুন' })).toBeDisabled()
 
-    fireEvent.change(screen.getByLabelText(/জন্ম নিবন্ধন নম্বর/), { target: { value: STUDENT } })
+    // Without a number the button must not be a dead end: it explains what is
+    // missing, moves the cursor to the box, and sends nothing to the server.
+    const input = screen.getByLabelText(/জন্ম নিবন্ধন নম্বর/)
+    await act(async () => {
+      screen.getByRole('button', { name: 'আবেদন করুন' }).click()
+    })
+    expect(screen.getByRole('alert')).toHaveTextContent('আগে এখানে শিক্ষার্থীর ১৭ অঙ্কের জন্ম নিবন্ধন নম্বর লিখুন')
+    expect(input).toHaveFocus()
+    expect(calls.some((c) => c.method === 'POST')).toBe(false)
+
+    fireEvent.change(input, { target: { value: STUDENT } })
     await advance(0)
-    expect(screen.getByRole('button', { name: 'আবেদন করুন' })).toBeEnabled()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
 
     await act(async () => {
       screen.getByRole('button', { name: 'আবেদন করুন' }).click()
@@ -102,6 +111,22 @@ describe('class list', () => {
 
     expect(screen.getByRole('alert')).toHaveTextContent('সার্ভারের সাথে যোগাযোগ করা যাচ্ছে না')
     expect(screen.getByRole('heading', { name: 'ক্লাস তালিকা' })).toBeInTheDocument()
+    // The header must not claim the system is fine while the server is unreachable.
+    expect(screen.getByText('সার্ভার বিচ্ছিন্ন')).toBeInTheDocument()
+  })
+
+  it('fills in a sample student number with one click', async () => {
+    vi.useFakeTimers()
+    mockBackend(({ path }) => (path === '/classes' ? { body: [morning(15)] } : { body: [] }))
+
+    render(<App />)
+    await advance(0)
+    await act(async () => {
+      screen.getByRole('button', { name: 'নমুনা নম্বর বসান' }).click()
+    })
+
+    expect(screen.getByLabelText(/জন্ম নিবন্ধন নম্বর/)).toHaveValue(STUDENT)
+    expect(screen.getByText('সার্ভার সংযুক্ত')).toBeInTheDocument()
   })
 })
 

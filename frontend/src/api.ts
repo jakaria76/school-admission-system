@@ -36,6 +36,29 @@ export class ApiError extends Error {
 
 const REQUEST_TIMEOUT_MS = 10_000
 
+/** Whether the last API call reached a working server. Drives the status pill in the header. */
+export type ConnectionState = 'connecting' | 'online' | 'offline'
+
+let connectionState: ConnectionState = 'connecting'
+const connectionListeners = new Set<() => void>()
+
+function setConnectionState(next: ConnectionState) {
+  if (next === connectionState) return
+  connectionState = next
+  connectionListeners.forEach((listener) => listener())
+}
+
+export function getConnectionState(): ConnectionState {
+  return connectionState
+}
+
+export function subscribeConnectionState(listener: () => void): () => void {
+  connectionListeners.add(listener)
+  return () => {
+    connectionListeners.delete(listener)
+  }
+}
+
 // Difference between the server clock and this browser's clock. Deadlines are decided by
 // the server, so countdowns must not depend on the user's clock being right.
 let serverOffsetMs = 0
@@ -77,10 +100,13 @@ async function request<T>(
       signal: controller.signal,
     })
   } catch {
+    setConnectionState('offline')
     throw new ApiError(0, 'NETWORK_ERROR', 'The server could not be reached.')
   } finally {
     clearTimeout(timer)
   }
+
+  setConnectionState(response.status >= 500 ? 'offline' : 'online')
 
   const text = await response.text().catch(() => '')
   let payload: unknown = null

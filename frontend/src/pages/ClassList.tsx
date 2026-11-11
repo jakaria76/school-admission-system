@@ -11,9 +11,11 @@ interface Props {
   studentId: string | null
   myHolds: Hold[] | null
   onChanged: () => void
+  /** Asks the app to point the user at the student-number box. */
+  onNeedStudentId: () => void
 }
 
-export function ClassList({ studentId, myHolds, onChanged }: Props) {
+export function ClassList({ studentId, myHolds, onChanged, onNeedStudentId }: Props) {
   const classes = usePolling('classes', api.listClasses, CLASS_REFRESH_MS)
   const now = useNow()
   const [applyingTo, setApplyingTo] = useState<string | null>(null)
@@ -27,7 +29,12 @@ export function ClassList({ studentId, myHolds, onChanged }: Props) {
   }
 
   async function apply(classId: string) {
-    if (!studentId || applyingTo) return
+    if (applyingTo) return
+    if (!studentId) {
+      // A dead button explains nothing: say what is missing and take the user there.
+      onNeedStudentId()
+      return
+    }
     setApplyingTo(classId)
     setActionError(null)
     try {
@@ -91,7 +98,10 @@ export function ClassList({ studentId, myHolds, onChanged }: Props) {
       )}
 
       {!studentId && (
-        <Alert kind="info">আবেদন করতে উপরের ঘরে শিক্ষার্থীর ১৭ অঙ্কের জন্ম নিবন্ধন নম্বর লিখুন।</Alert>
+        <Alert kind="info">
+          <strong>ধাপ ১:</strong> উপরের ঘরে শিক্ষার্থীর ১৭ অঙ্কের জন্ম নিবন্ধন নম্বর লিখুন।{' '}
+          <strong>ধাপ ২:</strong> পছন্দের ক্লাসের পাশে "আবেদন করুন" চাপুন।
+        </Alert>
       )}
       {actionError && <Alert kind="error">{actionError}</Alert>}
       {classes.error !== null && (
@@ -180,14 +190,8 @@ export function ClassList({ studentId, myHolds, onChanged }: Props) {
                           <button
                             type="button"
                             className="btn btn-primary"
-                            disabled={!studentId || full || applyingTo !== null}
-                            title={
-                              !studentId
-                                ? 'আগে উপরে জন্ম নিবন্ধন নম্বর লিখুন'
-                                : full
-                                  ? 'এই ক্লাসে এখন কোনো আসন খালি নেই'
-                                  : undefined
-                            }
+                            disabled={full || applyingTo !== null}
+                            title={full ? 'এই ক্লাসে এখন কোনো আসন খালি নেই' : undefined}
                             onClick={() => apply(item.id)}
                           >
                             {applyingTo === item.id ? (

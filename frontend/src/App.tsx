@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { api } from './api'
+import { useRef, useState, useSyncExternalStore } from 'react'
+import { api, getConnectionState, subscribeConnectionState } from './api'
 import { bn, effectiveStatus, isValidStudentId, normalizeStudentId } from './format'
 import { useHashRoute, useNow, usePolling } from './hooks'
 import { ClassList } from './pages/ClassList'
@@ -9,6 +9,14 @@ import { MyHolds } from './pages/MyHolds'
 
 const STUDENT_ID_KEY = 'admission.studentId'
 const MY_HOLDS_REFRESH_MS = 3000
+/** A well-formed number for trying the app out (the example from the assignment brief). */
+const SAMPLE_STUDENT_ID = '20152691234567890'
+
+const CONNECTION_LABEL = {
+  connecting: 'সংযোগ হচ্ছে…',
+  online: 'সার্ভার সংযুক্ত',
+  offline: 'সার্ভার বিচ্ছিন্ন',
+} as const
 
 // localStorage can be unavailable (private mode, blocked storage); the app must still work.
 function loadStudentId(): string {
@@ -32,6 +40,12 @@ export default function App() {
   const now = useNow()
   const [studentIdInput, setStudentIdInput] = useState(loadStudentId)
   const studentId = isValidStudentId(studentIdInput) ? studentIdInput : null
+  const connection = useSyncExternalStore(subscribeConnectionState, getConnectionState)
+  const studentInputRef = useRef<HTMLInputElement>(null)
+  // Counts the times the user tried an action that needs the number. It also restarts
+  // the attention animation, so pressing the button again visibly reacts again.
+  const [idRequested, setIdRequested] = useState(0)
+  const needsId = idRequested > 0 && !studentId
 
   // The student's applications live on the server, so they are still here after a
   // refresh or after closing and reopening the browser.
@@ -53,19 +67,44 @@ export default function App() {
     saveStudentId('')
   }
 
+  /** Called by pages when an action needs the student number: point the user at the box. */
+  function requestStudentId() {
+    setIdRequested((n) => n + 1)
+    const input = studentInputRef.current
+    if (input) {
+      input.scrollIntoView?.({ behavior: 'smooth', block: 'center' })
+      input.focus({ preventScroll: true })
+    }
+  }
+
   const holdMatch = /^\/holds\/([^/]+)$/.exec(route)
   const tab = holdMatch ? '/my' : route
 
   let page
   if (holdMatch) {
     const holdId = decodeURIComponent(holdMatch[1])
-    page = <HoldDetail key={holdId} holdId={holdId} studentId={studentId} onChanged={myHolds.refresh} />
+    page = (
+      <HoldDetail
+        key={holdId}
+        holdId={holdId}
+        studentId={studentId}
+        onChanged={myHolds.refresh}
+        onNeedStudentId={requestStudentId}
+      />
+    )
   } else if (route === '/admin') {
     page = <CreateClass />
   } else if (route === '/my') {
     page = <MyHolds studentId={studentId} holds={myHolds.data} loading={myHolds.loading} error={myHolds.error} />
   } else {
-    page = <ClassList studentId={studentId} myHolds={myHolds.data} onChanged={myHolds.refresh} />
+    page = (
+      <ClassList
+        studentId={studentId}
+        myHolds={myHolds.data}
+        onChanged={myHolds.refresh}
+        onNeedStudentId={requestStudentId}
+      />
+    )
   }
 
   return (
@@ -83,9 +122,9 @@ export default function App() {
             <div>
               <div className="brand-title-wrap">
                 <h1 className="brand-title">স্কুল ভর্তি</h1>
-                <span className="live-status-pill">
+                <span className={`live-status-pill status-${connection}`} role="status">
                   <span className="live-dot" />
-                  সিস্টেম সক্রিয়
+                  {CONNECTION_LABEL[connection]}
                 </span>
               </div>
               <p className="brand-subtitle">স্বচ্ছ ও স্বয়ংক্রিয় অনলাইন আসন সংরক্ষণ ও ভর্তি পোর্টাল</p>
@@ -93,7 +132,7 @@ export default function App() {
           </div>
 
           {/* Student Identity Box */}
-          <div className="student-card">
+          <div className={`student-card ${needsId ? 'needs-attention' : ''}`} data-attempt={idRequested}>
             <div className="student-card-header">
               <div className="student-label-wrap">
                 <svg className="id-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -117,6 +156,7 @@ export default function App() {
             <div className="input-wrap">
               <input
                 id="student-id"
+                ref={studentInputRef}
                 type="text"
                 inputMode="numeric"
                 autoComplete="off"
@@ -124,6 +164,7 @@ export default function App() {
                 value={studentIdInput}
                 onChange={(e) => onStudentIdChange(e.target.value)}
                 aria-describedby="student-id-hint"
+                aria-invalid={needsId}
                 className={`student-input ${studentId ? 'input-valid' : ''}`}
               />
               <span className="digit-counter">
@@ -131,17 +172,33 @@ export default function App() {
               </span>
             </div>
 
-            <div id="student-id-hint" className={`hint ${studentId ? 'hint-ok' : ''}`}>
+            <div
+              id="student-id-hint"
+              key={needsId ? idRequested : 0}
+              className={`hint ${studentId ? 'hint-ok' : needsId ? 'hint-error' : ''}`}
+              role={needsId ? 'alert' : undefined}
+            >
               {studentId ? (
                 <>
                   <span className="hint-icon">✓</span> নম্বর ঠিক আছে। এই শিক্ষার্থীর নামে আবেদন হবে।
                 </>
+              ) : needsId ? (
+                studentIdInput.length === 0 ? (
+                  'আগে এখানে শিক্ষার্থীর ১৭ অঙ্কের জন্ম নিবন্ধন নম্বর লিখুন, তারপর আবার বাটনটি চাপুন।'
+                ) : (
+                  `নম্বরটি অসম্পূর্ণ। আরও ${bn(17 - studentIdInput.length)}টি অঙ্ক লিখুন, তারপর আবার বাটনটি চাপুন।`
+                )
               ) : studentIdInput.length === 0 ? (
                 'আবেদন করতে ও নিজের আবেদন দেখতে নম্বরটি লিখুন।'
               ) : (
                 `আরও ${bn(17 - studentIdInput.length)}টি অঙ্ক লিখুন (মোট ১৭ অঙ্ক)।`
               )}
             </div>
+            {studentIdInput.length === 0 && (
+              <button type="button" className="sample-btn" onClick={() => onStudentIdChange(SAMPLE_STUDENT_ID)}>
+                নমুনা নম্বর বসান
+              </button>
+            )}
           </div>
         </div>
       </header>

@@ -25,6 +25,8 @@ The commits it made carry a `Co-Authored-By: Claude` trailer.
 | The first `docker-compose.yml` published the frontend on port 3000. | `docker compose up` failed: "port is already allocated" (another project on the development machine uses 3000). | Default changed to 5173 and made configurable with `FRONTEND_PORT`. |
 | A test compared `string?[]` with `string[]`, which produced a nullable-reference compiler warning. | Build output of `dotnet test`. | Added the missing null-forgiving operator. |
 | Several frontend files were first generated through one long shell command, which failed on quoting and wrote nothing. | The command's error output, then listing the directory. | Files were written one by one instead. |
+| On the class list the **apply** button was simply disabled until a student number was typed. Clicking it did nothing and nothing on screen said why. | Found by hand while trying the running app in the browser: "the apply button does not work". | The button is now always clickable; without a number it moves the cursor to the number box, highlights it and says what to type. A one-click sample number was added, and a browser click-through of the whole flow was run. |
+| The header showed a green "system active" badge that was a fixed label, even with the backend stopped. | Reading the redesigned header against the rule that a stopped server must be reported. | The badge now reflects the result of the latest API call (connected / disconnected). |
 | A helper used to create several commits stopped after the first one, so two commits were silently not made. | `git log` showed fewer commits than expected. | The remaining commits were made individually. |
 
 ## How the AI's work was checked
@@ -40,7 +42,7 @@ The code was not accepted on the AI's word; each claim was run:
   were still there.
 - **Does the UI really render and reach the API from the browser?** The running frontend
   was opened in a headless browser against the Docker stack (this also checks CORS).
-- Backend tests (57) and frontend tests (16) pass both locally and inside Docker.
+- Backend tests (57) and frontend tests (17) pass both locally and inside Docker.
 
 Two design points where the obvious AI-style answer was deliberately not used:
 
