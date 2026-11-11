@@ -1,22 +1,34 @@
 # AI usage
 
-## Tool
+## Tools
 
-Claude Code (Anthropic's coding agent, model Claude Fable 5.2), used inside VS Code.
+- **Claude Code** (Anthropic's coding agent, model Claude Fable 5.2), used inside VS Code.
+- **Cursor**, for the visual redesign of the frontend.
 
-## What it was used for
+## What they were used for
 
-The project skeleton (`dotnet new`, `npm create vite`) was created by hand. Starting from
-that skeleton and the assignment brief, Claude Code wrote, in one working session:
+The project skeleton (`dotnet new`, `npm create vite`) was created by hand, without AI.
+
+Starting from that skeleton and the assignment brief, **Claude Code** wrote:
 
 - the backend: API routes, validation, the SQL for holding / confirming / cancelling seats,
   schema creation
 - the backend tests, including the concurrency tests
-- the React frontend and its tests
+- the first version of the React frontend (all four screens, polling, countdown, error
+  messages) and its tests
 - the Dockerfiles and `docker-compose.yml`
 - the first draft of `README.md`, `ASSUMPTIONS.md` and this file
 
 The commits it made carry a `Co-Authored-By: Claude` trailer.
+
+**Cursor** was then used to restyle that frontend: the header, stat cards, table chips,
+the stepper and countdown on the application screen, and the stylesheet (commit "Enhance
+frontend UI with modern design system, stats cards, and Bengali typography"). It changed
+the look only; the API calls and the behaviour stayed as they were, and the existing
+frontend tests still passed afterwards.
+
+After the redesign, Claude Code fixed the two problems found in it (the last two UI rows
+in the table below).
 
 ## Where the AI got it wrong, and how that was caught
 
