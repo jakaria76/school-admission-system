@@ -48,6 +48,11 @@ export default function App() {
     saveStudentId(value)
   }
 
+  function clearStudentId() {
+    setStudentIdInput('')
+    saveStudentId('')
+  }
+
   const holdMatch = /^\/holds\/([^/]+)$/.exec(route)
   const tab = holdMatch ? '/my' : route
 
@@ -64,45 +69,127 @@ export default function App() {
   }
 
   return (
-    <div className="page">
-      <header className="topbar">
-        <h1>স্কুল ভর্তি</h1>
-        <div className="student-box">
-          <label htmlFor="student-id">শিক্ষার্থীর জন্ম নিবন্ধন নম্বর (১৭ অঙ্ক)</label>
-          <input
-            id="student-id"
-            type="text"
-            inputMode="numeric"
-            autoComplete="off"
-            placeholder="যেমন 20152691234567890"
-            value={studentIdInput}
-            onChange={(e) => onStudentIdChange(e.target.value)}
-            aria-describedby="student-id-hint"
-          />
-          <div id="student-id-hint" className={`hint ${studentId ? 'hint-ok' : ''}`}>
-            {studentId
-              ? '✓ নম্বর ঠিক আছে। এই শিক্ষার্থীর নামে আবেদন হবে।'
-              : studentIdInput.length === 0
-                ? 'আবেদন করতে ও নিজের আবেদন দেখতে নম্বরটি লিখুন।'
-                : `আরও ${bn(17 - studentIdInput.length)}টি অঙ্ক লিখুন (মোট ১৭ অঙ্ক)।`}
+    <div className="layout">
+      {/* Brand Header */}
+      <header className="brand-header">
+        <div className="brand-header-inner">
+          <div className="brand-identity">
+            <div className="brand-logo" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
+                <path d="M6 12v5c3 3 9 3 12 0v-5" />
+              </svg>
+            </div>
+            <div>
+              <div className="brand-title-wrap">
+                <h1 className="brand-title">স্কুল ভর্তি</h1>
+                <span className="live-status-pill">
+                  <span className="live-dot" />
+                  সিস্টেম সক্রিয়
+                </span>
+              </div>
+              <p className="brand-subtitle">স্বচ্ছ ও স্বয়ংক্রিয় অনলাইন আসন সংরক্ষণ ও ভর্তি পোর্টাল</p>
+            </div>
+          </div>
+
+          {/* Student Identity Box */}
+          <div className="student-card">
+            <div className="student-card-header">
+              <div className="student-label-wrap">
+                <svg className="id-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <rect x="3" y="4" width="18" height="16" rx="3" />
+                  <circle cx="9" cy="10" r="2" />
+                  <line x1="15" y1="8" x2="17" y2="8" />
+                  <line x1="15" y1="12" x2="17" y2="12" />
+                  <line x1="7" y1="16" x2="17" y2="16" />
+                </svg>
+                <label htmlFor="student-id" className="student-label">
+                  শিক্ষার্থীর জন্ম নিবন্ধন নম্বর (১৭ অঙ্ক)
+                </label>
+              </div>
+              {studentIdInput.length > 0 && (
+                <button type="button" onClick={clearStudentId} className="clear-btn" title="মুছে ফেলুন">
+                  মুছুন
+                </button>
+              )}
+            </div>
+
+            <div className="input-wrap">
+              <input
+                id="student-id"
+                type="text"
+                inputMode="numeric"
+                autoComplete="off"
+                placeholder="যেমন 20152691234567890"
+                value={studentIdInput}
+                onChange={(e) => onStudentIdChange(e.target.value)}
+                aria-describedby="student-id-hint"
+                className={`student-input ${studentId ? 'input-valid' : ''}`}
+              />
+              <span className="digit-counter">
+                {bn(studentIdInput.length)}/১৭
+              </span>
+            </div>
+
+            <div id="student-id-hint" className={`hint ${studentId ? 'hint-ok' : ''}`}>
+              {studentId ? (
+                <>
+                  <span className="hint-icon">✓</span> নম্বর ঠিক আছে। এই শিক্ষার্থীর নামে আবেদন হবে।
+                </>
+              ) : studentIdInput.length === 0 ? (
+                'আবেদন করতে ও নিজের আবেদন দেখতে নম্বরটি লিখুন।'
+              ) : (
+                `আরও ${bn(17 - studentIdInput.length)}টি অঙ্ক লিখুন (মোট ১৭ অঙ্ক)।`
+              )}
+            </div>
           </div>
         </div>
       </header>
 
-      <nav className="tabs" aria-label="প্রধান মেনু">
-        <a href="#/classes" className={tab === '/classes' ? 'active' : ''}>
-          ক্লাস তালিকা
-        </a>
-        <a href="#/my" className={tab === '/my' ? 'active' : ''}>
-          আমার আবেদন
-          {activeCount > 0 && <span className="count" title="চলমান আবেদন">{bn(activeCount)}</span>}
-        </a>
-        <a href="#/admin" className={tab === '/admin' ? 'active' : ''}>
-          ক্লাস তৈরি (school admin)
-        </a>
-      </nav>
+      {/* Main Container */}
+      <div className="page">
+        {/* Navigation Tabs */}
+        <nav className="tabs" aria-label="প্রধান মেনু">
+          <a href="#/classes" className={tab === '/classes' ? 'active' : ''}>
+            <svg className="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+            </svg>
+            ক্লাস তালিকা
+          </a>
+          <a href="#/my" className={tab === '/my' ? 'active' : ''}>
+            <svg className="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
+              <line x1="16" y1="13" x2="8" y2="13" />
+              <line x1="16" y1="17" x2="8" y2="17" />
+              <polyline points="10 9 9 9 8 9" />
+            </svg>
+            আমার আবেদন
+            {activeCount > 0 && (
+              <span className="count" title="চলমান আবেদন">
+                {bn(activeCount)}
+              </span>
+            )}
+          </a>
+          <a href="#/admin" className={tab === '/admin' ? 'active' : ''}>
+            <svg className="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="3" />
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+            </svg>
+            ক্লাস তৈরি (school admin)
+          </a>
+        </nav>
 
-      <main>{page}</main>
+        {/* Page Content */}
+        <main className="content-container">{page}</main>
+
+        {/* Professional Footer */}
+        <footer className="page-footer">
+          <p>© {bn(2026)} স্কুল ভর্তি ব্যবস্থাপনা পোর্টাল • First-Come-First-Served (FCFS) আসন বণ্টন ব্যবস্থা</p>
+          <p className="footer-sub">উচ্চ কনকারেন্সি সুরক্ষিত • ডেটাবেজ-স্তরে সিট লক নিশ্চিত</p>
+        </footer>
+      </div>
     </div>
   )
 }

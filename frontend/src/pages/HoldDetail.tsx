@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { api, type HoldStatus } from '../api'
 import { Alert, Spinner, StatusBadge } from '../components/ui'
-import { effectiveStatus, formatRemaining, remainingMs } from '../format'
+import { bn, effectiveStatus, formatRemaining, remainingMs } from '../format'
 import { useNow, usePolling } from '../hooks'
 import { errorMessage } from '../messages'
 
@@ -24,20 +24,24 @@ export function HoldDetail({ holdId, studentId, onChanged }: Props) {
 
   if (!hold.data) {
     return (
-      <section>
-        <h2>আবেদন</h2>
-        {hold.loading && <Spinner label="আবেদনের তথ্য লোড হচ্ছে…" />}
-        {hold.error !== null && (
-          <>
-            <Alert kind="error">{errorMessage(hold.error)}</Alert>
-            <button type="button" className="btn" onClick={hold.refresh}>
-              আবার চেষ্টা করুন
-            </button>
-          </>
-        )}
-        <p>
-          <a href="#/my">← আমার আবেদন</a>
-        </p>
+      <section className="detail-section">
+        <div className="section-head">
+          <h2>আবেদনের বিবরণ</h2>
+          <a href="#/my" className="back-link">
+            ← আমার আবেদন
+          </a>
+        </div>
+        <div className="card loading-card">
+          {hold.loading && <Spinner label="আবেদনের তথ্য লোড হচ্ছে…" />}
+          {hold.error !== null && (
+            <>
+              <Alert kind="error">{errorMessage(hold.error)}</Alert>
+              <button type="button" className="btn btn-primary" onClick={hold.refresh}>
+                আবার চেষ্টা করুন
+              </button>
+            </>
+          )}
+        </div>
       </section>
     )
   }
@@ -47,6 +51,7 @@ export function HoldDetail({ holdId, studentId, onChanged }: Props) {
   const status: HoldStatus = serverStatus === 'HELD' && knownStatus ? knownStatus : serverStatus
   const remaining = remainingMs(hold.data, now)
   const isHeld = status === 'HELD'
+  const isUrgent = isHeld && remaining < 120_000 // less than 2 minutes
 
   async function run(action: 'pay' | 'cancel') {
     if (!studentId || busy) return
@@ -74,34 +79,94 @@ export function HoldDetail({ holdId, studentId, onChanged }: Props) {
   }
 
   return (
-    <section>
+    <section className="detail-section">
       <div className="section-head">
-        <h2>আবেদন</h2>
-        <a href="#/my">← আমার আবেদন</a>
+        <div>
+          <h2>আবেদন বিবরণ ও ভর্তি নিশ্চিতকরণ</h2>
+          <p className="section-desc">আবেদন আইডি: <code className="id-code">{hold.data.holdId}</code></p>
+        </div>
+        <a href="#/my" className="back-link">
+          ← আমার আবেদন
+        </a>
       </div>
 
-      <div className="card">
-        <dl className="details">
-          <dt>ক্লাস</dt>
-          <dd>{hold.data.className ?? hold.data.classId}</dd>
-          <dt>অবস্থা</dt>
-          <dd>
-            <StatusBadge status={status} />
-          </dd>
-          {isHeld && (
-            <>
-              <dt>মেয়াদ শেষ হতে বাকি</dt>
-              <dd className="countdown" data-testid="countdown">
-                {formatRemaining(remaining)}
-              </dd>
-            </>
-          )}
-        </dl>
+      <div className="card hold-card">
+        {/* Visual Progress Steps */}
+        <div className="stepper">
+          <div className={`step-item ${status === 'HELD' || status === 'CONFIRMED' ? 'step-done' : ''}`}>
+            <div className="step-circle">১</div>
+            <div className="step-label">আসন সংরক্ষণ (Hold)</div>
+          </div>
+          <div className={`step-line ${status === 'CONFIRMED' ? 'line-done' : ''}`} />
+          <div className={`step-item ${status === 'CONFIRMED' ? 'step-done' : isHeld ? 'step-active' : ''}`}>
+            <div className="step-circle">২</div>
+            <div className="step-label">ভর্তি ফি পরিশোধ</div>
+          </div>
+          <div className={`step-line ${status === 'CONFIRMED' ? 'line-done' : ''}`} />
+          <div className={`step-item ${status === 'CONFIRMED' ? 'step-done' : ''}`}>
+            <div className="step-circle">৩</div>
+            <div className="step-label">ভর্তি চূড়ান্ত</div>
+          </div>
+        </div>
+
+        {/* Live Countdown Timer Hero (When HELD) */}
+        {isHeld && (
+          <div className={`timer-hero ${isUrgent ? 'timer-urgent' : ''}`}>
+            <div className="timer-badge">
+              <svg className="timer-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg>
+              <span>মেয়াদ শেষ হতে বাকি</span>
+            </div>
+            <div className="countdown" data-testid="countdown">
+              {formatRemaining(remaining)}
+            </div>
+            <p className="timer-note">
+              {isUrgent ? '⚠️ সময় প্রায় শেষ! আসন ধরে রাখতে দ্রুত ভর্তি ফি জমা দিন।' : 'এই সময়ের মধ্যে ভর্তি ফি প্রদান করে আসনটি নিশ্চিত করুন।'}
+            </p>
+          </div>
+        )}
+
+        {/* Key Detail List */}
+        <div className="detail-grid">
+          <dl className="details">
+            <dt>ক্লাস</dt>
+            <dd className="detail-value-strong">{hold.data.className ?? hold.data.classId}</dd>
+            <dt>অবস্থা</dt>
+            <dd>
+              <StatusBadge status={status} />
+            </dd>
+            {isHeld && (
+              <>
+                <dt>মেয়াদ শেষ হতে বাকি</dt>
+                <dd className="countdown-text">
+                  {formatRemaining(remaining)}
+                </dd>
+              </>
+            )}
+            {hold.data.studentId && (
+              <>
+                <dt>শিক্ষার্থীর নম্বর</dt>
+                <dd>{bn(hold.data.studentId)}</dd>
+              </>
+            )}
+          </dl>
+        </div>
 
         {status === 'HELD' && (
-          <p>এই সময়ের মধ্যে ভর্তি ফি জমা দিলে ভর্তি নিশ্চিত হবে। সময় পেরিয়ে গেলে আসনটি অন্যদের জন্য খুলে যাবে।</p>
+          <div className="info-banner">
+            <svg className="banner-icon" viewBox="0 0 20 20" fill="currentColor" width="18" height="18" aria-hidden="true">
+              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z" clipRule="evenodd" />
+            </svg>
+            <p>এই সময়ের মধ্যে ভর্তি ফি জমা দিলে ভর্তি নিশ্চিত হবে। সময় পেরিয়ে গেলে আসনটি অন্যদের জন্য খুলে যাবে।</p>
+          </div>
         )}
-        {status === 'CONFIRMED' && <Alert kind="success">ভর্তি ফি জমা হয়েছে। ভর্তি নিশ্চিত। অভিনন্দন!</Alert>}
+        {status === 'CONFIRMED' && (
+          <Alert kind="success">
+            <strong>অভিনন্দন!</strong> ভর্তি ফি জমা হয়েছে। ভর্তি সফলভাবে নিশ্চিত করা হয়েছে।
+          </Alert>
+        )}
         {status === 'EXPIRED' && (
           <Alert kind="warning">
             ফি জমা দেওয়ার সময় শেষ হয়ে গেছে, তাই আসনটি ছেড়ে দেওয়া হয়েছে। আসন খালি থাকলে{' '}
@@ -127,11 +192,22 @@ export function HoldDetail({ holdId, studentId, onChanged }: Props) {
         <div className="actions">
           <button
             type="button"
-            className="btn btn-primary"
+            className="btn btn-pay"
             disabled={!isHeld || !studentId || busy !== null}
             onClick={() => run('pay')}
           >
-            {busy === 'pay' ? 'ফি জমা হচ্ছে…' : 'ভর্তি ফি দিন'}
+            {busy === 'pay' ? (
+              <>
+                <span className="btn-spinner" /> ফি জমা হচ্ছে…
+              </>
+            ) : (
+              <>
+                <svg className="btn-icon" viewBox="0 0 20 20" fill="currentColor" width="18" height="18" aria-hidden="true">
+                  <path fillRule="evenodd" d="M2.5 4A1.5 1.5 0 001 5.5V6h18v-.5A1.5 1.5 0 0017.5 4h-15zM19 8.5H1v6A1.5 1.5 0 002.5 16h15a1.5 1.5 0 001.5-1.5v-6zM3 13.25a.75.75 0 01.75-.75h1.5a.75.75 0 010 1.5h-1.5a.75.75 0 01-.75-.75zm4.75-.75a.75.75 0 000 1.5h3.5a.75.75 0 000-1.5h-3.5z" clipRule="evenodd" />
+                </svg>
+                ভর্তি ফি দিন
+              </>
+            )}
           </button>
           <button
             type="button"
@@ -139,7 +215,13 @@ export function HoldDetail({ holdId, studentId, onChanged }: Props) {
             disabled={!isHeld || !studentId || busy !== null}
             onClick={() => run('cancel')}
           >
-            {busy === 'cancel' ? 'বাতিল হচ্ছে…' : 'বাতিল'}
+            {busy === 'cancel' ? (
+              <>
+                <span className="btn-spinner" /> বাতিল হচ্ছে…
+              </>
+            ) : (
+              'বাতিল'
+            )}
           </button>
         </div>
       </div>
