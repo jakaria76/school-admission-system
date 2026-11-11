@@ -1,0 +1,21 @@
+# .NET
+bin/
+obj/
+*.user
+.vs/
+TestResults/
+
+# Node
+node_modules/
+dist/
+coverage/
+
+# Env / editor
+.env
+.env.local
+.idea/
+.vscode/
+.DS_Store
+
+# Assignment brief must not be published
+*.pdf
