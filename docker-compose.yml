@@ -1,0 +1,78 @@
+# docker compose up            -> PostgreSQL + backend (http://localhost:8080) + frontend (http://localhost:5173)
+# docker compose --profile test run --rm backend-tests    -> backend tests
+# docker compose --profile test run --rm frontend-tests   -> frontend tests
+# docker compose --profile multi up                       -> also a second backend on http://localhost:8081
+
+x-backend: &backend
+  build: ./backend
+  environment:
+    # Database connection; override to point the backend at another database.
+    DB_CONNECTION_STRING: ${DB_CONNECTION_STRING:-Host=db;Port=5432;Database=admission;Username=admission;Password=admission}
+    # How long a seat stays held before the fee must be paid.
+    HOLD_DURATION_SECONDS: ${HOLD_DURATION_SECONDS:-600}
+  depends_on:
+    db:
+      condition: service_healthy
+  restart: unless-stopped
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: admission
+      POSTGRES_USER: admission
+      POSTGRES_PASSWORD: admission
+    volumes:
+      # Named volume: data survives `docker compose down` followed by `docker compose up`.
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admission -d admission"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+
+  backend:
+    <<: *backend
+    ports:
+      - "8080:8080"
+
+  # Bonus: a second backend process on another port, sharing the same database.
+  backend-2:
+    <<: *backend
+    profiles: ["multi"]
+    ports:
+      - "8081:8080"
+
+  frontend:
+    build: ./frontend
+    environment:
+      # Backend URL as seen from the browser.
+      API_BASE_URL: ${API_BASE_URL:-http://localhost:8080}
+    ports:
+      - "${FRONTEND_PORT:-5173}:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  backend-tests:
+    profiles: ["test"]
+    build:
+      context: .
+      dockerfile: backend.Tests/Dockerfile
+    environment:
+      # Each test creates and drops its own throwaway database on this server.
+      TEST_DB_CONNECTION_STRING: Host=db;Port=5432;Database=postgres;Username=admission;Password=admission
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend-tests:
+    profiles: ["test"]
+    build:
+      context: ./frontend
+      target: build
+    command: ["npm", "test"]
+
+volumes:
+  pgdata:
